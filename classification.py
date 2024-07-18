@@ -1,4 +1,7 @@
 from __future__ import print_function
+
+import warnings
+
 import numpy as np
 from sklearn.metrics import accuracy_score
 from sklearn.cluster import KMeans
@@ -7,6 +10,8 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.preprocessing import normalize
 import scipy.sparse as sp
+
+warnings.filterwarnings("ignore", category=UserWarning, message="KMeans is known to have a memory leak on Windows with MKL")
 
 def run_regression(train_embeds, train_labels, test_embeds, test_labels):
     from sklearn.linear_model import LogisticRegression
@@ -49,8 +54,7 @@ def classify(embeds, dataset, per_class):
 
 
 def clustering(embeds, dataset):
-
-    label_file = open("data/{}{}".format(dataset,"_labels.txt"), 'r')
+    label_file = open("data/{}{}".format(dataset, "_labels.txt"), 'r')
     label_text = label_file.readlines()
     labels = []
     for line in label_text:
@@ -60,24 +64,43 @@ def clustering(embeds, dataset):
     label_file.close()
     labels = np.array(labels)
     rep = 10
-    # u, s, v = sp.linalg.svds(embeds, k=32, which='LM')
-    # u = normalize(embeds.dot(v.T))
     u = embeds
     k = len(np.unique(labels))
     ac = np.zeros(rep)
     nm = np.zeros(rep)
     f1 = np.zeros(rep)
+
+    intra_distances = []
+    inter_distances = []
+
     for i in range(rep):
         kmeans = KMeans(n_clusters=k).fit(u)
         predict_labels = kmeans.predict(u)
-        #intraD[i] = square_dist(predict_labels, u)
-        # intraD[i] = dist(predict_labels, feature)
+
+        # 计算簇内距离（intra-cluster distance）
+        intra_distances.append(kmeans.inertia_ / len(u))
+
+        # 计算簇间距离（inter-cluster distance）
+        centroids = kmeans.cluster_centers_
+        inter_cluster_distances = np.zeros((k, k))
+        for i in range(k):
+            for j in range(k):
+                if i != j:
+                    distance = np.linalg.norm(centroids[i] - centroids[j])
+                    inter_cluster_distances[i, j] = distance
+        inter_distances.append(np.mean(inter_cluster_distances))
+
         cm = clustering_metrics(labels, predict_labels)
         ac[i], nm[i], f1[i] = cm.evaluationClusterModelFromLabel()
 
-    print(np.mean(ac))
-    print(np.std(ac))
-    print(np.mean(nm))
-    print(np.std(nm))
-    print(np.mean(f1))
-    print(np.std(f1))
+    print("Accuracy mean:", np.mean(ac))
+    print("Accuracy std:", np.std(ac))
+    print("NMI mean:", np.mean(nm))
+    print("NMI std:", np.std(nm))
+    print("F1 mean:", np.mean(f1))
+    print("F1 std:", np.std(f1))
+
+    print("Intra-cluster distance mean:", np.mean(intra_distances))
+    print("Intra-cluster distance std:", np.std(intra_distances))
+    print("Inter-cluster distance mean:", np.mean(inter_distances))
+    print("Inter-cluster distance std:", np.std(inter_distances))

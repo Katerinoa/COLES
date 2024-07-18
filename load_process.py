@@ -1,6 +1,9 @@
 import os
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
+import torch
+from sklearn.neighbors import kneighbors_graph
 
 from preprocess import eliminate_self_loops as eliminate_self_loops_adj, largest_connected_components
 
@@ -9,6 +12,7 @@ class SparseGraph:
     """Attributed labeled graph stored in sparse matrix form.
 
     """
+
     def __init__(self, adj_matrix, attr_matrix=None, labels=None,
                  node_names=None, attr_names=None, class_names=None, metadata=None):
         """Create an attributed graph.
@@ -142,9 +146,6 @@ def eliminate_self_loops(G):
     return G
 
 
-
-
-
 def load_npz_to_sparse_graph(file_name):
     """Load a SparseGraph from a Numpy binary file.
 
@@ -242,3 +243,56 @@ def save_sparse_graph_to_npz(filepath, sparse_graph):
 
     np.savez(filepath, **data_dict)
 
+
+def normalize_adj(adj):
+    """Symmetrically normalize adjacency matrix."""
+    adj = sp.coo_matrix(adj)
+    rowsum = np.array(adj.sum(1))
+    d_inv_sqrt = np.power(rowsum, -0.5).flatten()
+    d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
+    d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
+    return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
+
+def load_xlsx_to_sparse_graph(data_name):
+    file_path = f"data/{data_name}"
+    data = pd.read_excel(file_path, header=1)  # 跳过第一行中文属性名，从第二行开始加载
+
+    # 选择报警属性（使用英文属性名）
+    alarm_attributes = [
+        'fatigue_alarm', 'smoking', 'make_phone', 'over_speed', 'lighting',
+        'lane_departure', 'car_too_close', 'collision', 'frequent_smoking', 'frequent_make_phone',
+        'dangerous_turn', 'single_drive_over', 'today_drive_over', 'occlusion_day'
+    ]
+
+    # 初始化权重系数 alpha
+    n = len(alarm_attributes)
+    alphas = np.ones(n) / n
+
+    # 将所有报警次数列转换为数值类型，非数值数据转换为零
+    data[alarm_attributes] = data[alarm_attributes].apply(pd.to_numeric, errors='coerce').fillna(0)
+
+    # 使用反对数函数计算每个属性的得分
+    def score_function(x, beta=0.1):
+        return np.exp(-beta * x)
+
+    scores = {attr: score_function(data[attr]) for attr in alarm_attributes}
+
+    # 将得分字典转换为 DataFrame
+    scores_df = pd.DataFrame(scores)
+
+    # 计算每条数据的最终得分
+    final_scores = scores_df.dot(alphas).astype(float)  # 确保 final_scores 是浮点数
+
+    # 准备节点特征矩阵和邻接矩阵
+    # 节点特征矩阵为加权得分
+    node_features = scores_df.values
+
+    # 使用K近邻算法构建邻接矩阵
+    adjacency_matrix = kneighbors_graph(node_features, n_neighbors=5, mode='connectivity', include_self=True)
+    adjacency_matrix = adjacency_matrix.toarray()
+
+    # 计算标准化的邻接矩阵和拉普拉斯矩阵
+    adj_normalized = normalize_adj(sp.eye(adjacency_matrix.shape[0]) + adjacency_matrix)
+    laplacian = normalize_adj(adjacency_matrix)
+
+    return node_features, adj_normalized, laplacian, final_scores
