@@ -253,7 +253,8 @@ def normalize_adj(adj):
     d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
     return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
 
-def load_xlsx_to_sparse_graph(data_name):
+
+def load_xlsx_to_sparse_graph(data_name, alphas):
     file_path = f"data/{data_name}"
     data = pd.read_excel(file_path, header=1)  # 跳过第一行中文属性名，从第二行开始加载
 
@@ -263,10 +264,6 @@ def load_xlsx_to_sparse_graph(data_name):
         'lane_departure', 'car_too_close', 'collision', 'frequent_smoking', 'frequent_make_phone',
         'dangerous_turn', 'single_drive_over', 'today_drive_over', 'occlusion_day'
     ]
-
-    # 初始化权重系数 alpha
-    n = len(alarm_attributes)
-    alphas = np.ones(n) / n
 
     # 将所有报警次数列转换为数值类型，非数值数据转换为零
     data[alarm_attributes] = data[alarm_attributes].apply(pd.to_numeric, errors='coerce').fillna(0)

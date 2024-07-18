@@ -93,14 +93,19 @@ def clustering(embeds, dataset):
         cm = clustering_metrics(labels, predict_labels)
         ac[i], nm[i], f1[i] = cm.evaluationClusterModelFromLabel()
 
-    print("Accuracy mean:", np.mean(ac))
-    print("Accuracy std:", np.std(ac))
-    print("NMI mean:", np.mean(nm))
-    print("NMI std:", np.std(nm))
-    print("F1 mean:", np.mean(f1))
-    print("F1 std:", np.std(f1))
+    results = {
+        "accuracy_mean": np.mean(ac),
+        "accuracy_std": np.std(ac),
+        "nmi_mean": np.mean(nm),
+        "nmi_std": np.std(nm),
+        "f1_mean": np.mean(f1),
+        "f1_std": np.std(f1),
+        "intra_cluster_distance_mean": np.mean(intra_distances),
+        "intra_cluster_distance_std": np.std(intra_distances),
+        "inter_cluster_distance_mean": np.mean(inter_distances),
+        "inter_cluster_distance_std": np.std(inter_distances)
+    }
+    for key, value in results.items():
+        print(f"{key}: {value}")
 
-    print("Intra-cluster distance mean:", np.mean(intra_distances))
-    print("Intra-cluster distance std:", np.std(intra_distances))
-    print("Inter-cluster distance mean:", np.mean(inter_distances))
-    print("Inter-cluster distance std:", np.std(inter_distances))
+    return results

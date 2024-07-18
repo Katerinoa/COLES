@@ -170,7 +170,7 @@ def load_dataset(dataset_str):
     return X, adj_normalized
 
 
-def load_dataset_adj_lap(dataset_str):
+def load_dataset_adj_lap(dataset_str, alphas=None):
     if dataset_str == 'cora_full':
         data_name = dataset_str + '.npz'
         data_graph = load_process.load_npz_to_sparse_graph("data/{}".format(data_name))
@@ -183,7 +183,7 @@ def load_dataset_adj_lap(dataset_str):
         Laplacian = torch.from_numpy(normalize_adj(A).toarray()).float()
     elif dataset_str == 'drive':
         data_name = dataset_str + '.xlsx'
-        node_features, adj_normalized, laplacian, final_scores = load_process.load_xlsx_to_sparse_graph(data_name)
+        node_features, adj_normalized, laplacian, final_scores = load_process.load_xlsx_to_sparse_graph(data_name, alphas)
 
         # 生成标签数据、测试和训练数据集
         labels = generate_labels(dataset_str, final_scores)

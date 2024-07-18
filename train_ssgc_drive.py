@@ -14,13 +14,13 @@ parser.add_argument('--seed', type=int, default=123,
                     help='seed')
 parser.add_argument('--nhid', type=int, default=512,
                     help='hidden size')
-parser.add_argument('--output', type=int, default=512,
+parser.add_argument('--output', type=int, default=5,
                     help='output size')
 parser.add_argument('--lr', type=float, default=0.0001,
                     help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-4,
                     help='weight decay')
-parser.add_argument('--epochs', type=int, default=80,
+parser.add_argument('--epochs', type=int, default=100,
                     help='maximum number of epochs')
 parser.add_argument('--sample', type=int, default=5,
                     help='    ')
@@ -34,7 +34,12 @@ args.device = 'cpu'
 torch.manual_seed(args.seed)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-feature, adj_normalized, lap_normalized= load_dataset_adj_lap(args.dataset)
+# 初始化权重系数 alpha
+n = args.num_features
+alphas = np.ones(n) / n
+
+# 加载数据集
+feature, adj_normalized, lap_normalized = load_dataset_adj_lap(args.dataset, alphas)
 feature = feature.to(device)
 adj_normalized = adj_normalized.to(device)
 lap_normalized = lap_normalized.to(device)
@@ -61,6 +66,5 @@ for epoch in range(args.epochs):
     optimizer.step()
 
 emb = model(emb).cpu().detach().numpy()
-np.save('embedding.npy', emb)
 classify(emb, args.dataset, per_class='20')
 classify(emb, args.dataset, per_class='5')
