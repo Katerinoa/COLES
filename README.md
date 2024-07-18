@@ -14,11 +14,13 @@ This home repo contains the implementation for citation networks (Cora, Citeseer
 Our implementation works with PyTorch>=1.0.0
 
 ### Data
-We provide the citation network datasets under `data/`.
+We provide the citation network datasets 
 
 ### Usage
+1. Store the set of alarm statistics under `data/`, named `drive.xlsx`.
 
-```
-$ python train_ssgc_(dataset_name).py
-$ python train_ssgc_(dataset_name)_clustering.py
-```
+2. Enter the following command on the command line to execute
+    ```
+    $ python train_ssgc_drive.py
+    $ python train_ssgc_drive_clustering.py
+    ```
